@@ -18,17 +18,18 @@
                       (displayln (format "~a: error: ~a" filename (exn:compiler-message e))))])
      (with-input-from-file filename
        (thunk
-        (call-with-output-file*
-         (string-append filename ".js")
-         (λ (out-file)
-           (let ([module (parameterize ([read-accept-lang #t]
-                                        [read-accept-reader #t])
-                           (read))])
-             (unless (eof-object? (read))
-               (raise (exn:compiler (format "expected only one module per file"))))
-             (when (DEBUG)
-               (displayln (format "DEBUG: ~a" module)))
-             (write-string (racket->js module) out-file)))
-         #:mode 'text
-         #:exists 'truncate/replace))
+        (let ([module (parameterize ([read-accept-lang #t]
+                                     [read-accept-reader #t])
+                        (read))])
+          (unless (eof-object? (read))
+            (raise (exn:compiler (format "expected only one module per file"))))
+          (when (DEBUG)
+            (displayln (format "DEBUG: ~a" module)))
+          (let ([compiled (racket->js module)])
+            (call-with-output-file*
+             (string-append filename ".js")
+             (λ (out-file)
+               (write-string compiled out-file))
+             #:mode 'text
+             #:exists 'truncate/replace))))
        #:mode 'text))))
