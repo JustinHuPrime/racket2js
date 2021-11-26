@@ -30,15 +30,44 @@
 (define/contract PREAMBLE
   string?
   @string-append{
- // This file was generated using racket2js version @VERSION @"\n\n"})
+ // This file was generated using racket2js version @VERSION
+ function $addition(...args) @"{"
+   return args.reduce((a, b) => @"{"
+     if (typeof b !== "number") throw new Error(`+: contract violation\nexpected: number?\ngiven: $@"{"b@"}"`);
+     return a + b;
+   @"}", 0);
+ @"}"
+ @"\n\n"})
 
 (define/contract (compile-define who what stab)
   (-> any/c any/c stab? (list/c stab? string?))
   (list stab "TODO"))
 
+(define/contract (compile-number number)
+  (-> number? string?)
+  (unless (real? number)
+    (raise (exn:compiler "only real numbers are supported")))
+  (format "~a" number))
+
+(define/contract (compile-id id stab)
+  (-> symbol? stab? string?)
+  (hash-ref stab id (thunk (raise (exn:compiler (format "no definition of ~a found" id))))))
+
+(define/contract (compile-application fn args stab)
+  (-> any/c (listof any/c) stab? string?)
+  @string-append{@(compile-expr fn stab)(@(string-join (map (λ (arg) (compile-expr arg stab)) args) ", "))})
+
 (define/contract (compile-expr expr stab)
-  (-> any/c stab? (list/c stab? string?))
-  (list stab "TODO"))
+  (-> any/c stab? string?)
+  (match expr
+    [`,number #:when (number? number)
+     (compile-number number)]
+    ;; TODO: strings, booleans, maybe characters
+    [`,id #:when (symbol? id)
+     (compile-id id stab)]
+    [`(,fn . ,args)
+     (compile-application fn args stab)]
+    [_ (raise (exn:compiler "invalid expression encountered"))]))
 
 (define/contract (compile-form form stab)
   (-> any/c stab? (list/c stab? string?))
@@ -46,7 +75,7 @@
     [`(define ,who ,what)
      (compile-define who what stab)]
     [`,expr
-     (compile-expr expr stab)]))
+     (list stab @string-append{console.log(@(compile-expr expr stab))})]))
 
 (provide (contract-out [racket->js (value-contract racket->js)]))
 (define/contract (racket->js module)
@@ -61,7 +90,7 @@
      (unless (or (equal? module-path 'racket)
                  (equal? module-path 'racket/base))
        (raise (exn:compiler "expected the module language to be racket or racket/base")))
-     (string-join (for/fold ([stab (hash)]
+     (string-join (for/fold ([stab (hash '+ "$addition")]
                              [compiled (list)]
                              #:result (reverse compiled))
                             ([form forms])
