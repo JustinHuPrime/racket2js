@@ -19,7 +19,7 @@
 ;;
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(provide (contract-out [DEBUG (value-contract DEBUG)]))
-(define/contract DEBUG
-  (parameter/c boolean?)
-  (make-parameter #t))
+(provide (contract-out [VERSION #px"[[:digit:]]+\\.[[:digit:]]+\\.[[:digit:]]+"]))
+(define/contract VERSION
+  #px"[[:digit:]]+\\.[[:digit:]]+\\.[[:digit:]]+"
+  "0.1.0")
